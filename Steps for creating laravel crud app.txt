@@ -1,0 +1,244 @@
+Step 1. Create a laravel project using command like this-
+composer create-project --prefer-dist laravel/laravel crud-app
+
+Step 2. Create a controller using these commands-
+php artisan make:controller Student
+php artisan make:controller Classes
+
+Step 3. Create a model using this command -
+php artisan make:model Student
+php artisan make:model Classes
+
+Step 3. Create a migration for creating database tables using this command -
+php artisan make:migration create_students_table
+php artisan make:migration create_classes_table
+
+Step 4. Create a database in your phpmyadmin panel and choose the name whatever you want.
+
+step 5. open .env file and register the ddatabase that you have created -
+like this- DB_DATABASE=laravel
+
+step 6. goto database>migrations> folder whare you will see the files like this
+2024_01_25_133840_create_students_table.php
+......
+........
+open a file whereyou want to database table's columns
+and define the column like this 
+
+Schema::create('students', function (Blueprint $table) {
+            $table->id();
+            $table->string('student_name');
+            $table->integer('student_class');
+            $table->integer('student_age');
+            $table->string('student_gender',5);
+            $table->timestamps();
+        });
+
+and for 2024_01_25_133840_create_classes_table.php
+ Schema::create('classes', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+
+step 7. goto controllers folder and 
+choose student controller and create functions like this
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Student;
+use App\Models\Classes;
+
+class StudentController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $students = Student::select('students.*','classes.name as class_name')->latest('id')
+                    ->leftJoin('classes','classes.id','=','students.student_class')
+                    ->paginate(5);
+        return view('index',['students'=>$students]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {   
+        $class_list = Classes::latest()->get();
+        return view('create',['classes'=>$class_list]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'class' => 'required|integer',
+            'age' => 'required|integer|max:50|min:18',
+            'gender' => 'required|string',
+        ]);
+
+        $student = new Student;
+        $student->student_name = $request->name;
+        $student->student_class = $request->class;
+        $student->student_age = $request->age;
+        $student->student_gender = $request->gender;
+        $student->save();
+        return '1';
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        $class_list = Classes::latest()->get();
+        $student = Student::find($id);
+
+        return view('edit',['student'=>$student,'classes'=>$class_list]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'class' => 'required|integer',
+            'age' => 'required|integer|max:50|min:18',
+            'gender' => 'required|string',
+        ]);
+
+        $student= Student::where(['id'=>$id])->update([
+            'student_name'=>$request->input('name'),
+            'student_class'=>$request->input('class'),
+            'student_age'=>$request->input('age'),
+            'student_gender'=>$request->input('gender'),
+        ]);
+        return '1';
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        $destroy = Student::where('id',$id)->delete();
+        return $destroy;
+    }
+}
+
+step 8. goto routes folder and create routes like this 
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\StudentController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+
+Route::get('/', function () {
+    return redirect('/students');
+});
+
+Route::resource('/students', StudentController::class);
+
+
+9. goto resources>views> folder and create views like this 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="site-url" content="{{ url('/') }}">
+    <link rel="stylesheet" href="{{asset('assets/css/bootstrap4.0.0.min.css')}}">
+    <link rel="stylesheet" href="{{asset('assets/css/style.css')}}">
+    <title>@yield('title')</title>
+    <style>
+        .page-link{
+            color: #28A745;
+        }
+        .page-item.active .page-link{
+            background-color: #28A745;
+            border-color: #28A745;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <header class="bg-success p-2">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h1 class="text-center text-white">Laravel Crud with AJAX</h1>
+                    </div>
+                </div>
+            </div>
+        </header>
+        @yield('content')
+        <footer class="bg-success text-white p-2 text-center">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-12">
+                        <span>Copyright © @php echo date('Y'); @endphp | <a href="#" class="text-white" target="_blank">Kaushal Nishad</a></span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+    <script src="{{asset('assets/js/jquery.min.js')}}"></script>
+    <script src="{{asset('assets/js/jquery.validate.min.js')}}"></script>
+    <script src="{{asset('assets/js/main_ajax.js')}}"></script>
+</body>
+</html>
